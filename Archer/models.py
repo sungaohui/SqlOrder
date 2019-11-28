@@ -12,39 +12,39 @@ from .aes_decryptor import Prpcrypt
 # 角色分两种：
 # 1.工程师：可以提交SQL上线单的工程师们，username字段为登录用户名，display字段为展示的中文名。
 # 2.审核人：可以审核并执行SQL上线单的管理者、高级工程师、系统管理员们。
-class users(AbstractUser):
-    display = models.CharField('显示的中文名', max_length=50)
-    role = models.CharField('角色', max_length=20, choices=(('工程师', '工程师'), ('审核人', '审核人'), ('DBA', 'DBA')), default='工程师')
-    is_ldapuser = models.BooleanField('ldap用戶', default=False)
-
-    def __str__(self):
-        return self.username
-
-    class Meta:
-        verbose_name = u'用户配置'
-        verbose_name_plural = u'用户配置'
+# class users(AbstractUser):
+#     display = models.CharField('显示的中文名', max_length=50)
+#     role = models.CharField('角色', max_length=20, choices=(('工程师', '工程师'), ('审核人', '审核人'), ('DBA', 'DBA')), default='工程师')
+#     is_ldapuser = models.BooleanField('ldap用戶', default=False)
+#
+#     def __str__(self):
+#         return self.username
+#
+#     class Meta:
+#         verbose_name = u'用户配置'
+#         verbose_name_plural = u'用户配置'
 
 # 各个线上主库地址。
-class master_config(models.Model):
-    cluster_name = models.CharField('集群名称', max_length=50, unique=True)
-    master_host = models.CharField('主库地址', max_length=200)
-    master_port = models.IntegerField('主库端口', default=3306)
-    master_user = models.CharField('登录主库的用户名', max_length=100)
-    master_password = models.CharField('登录主库的密码', max_length=300)
+class db_config(models.Model):
+    db_name = models.CharField('数据库名称', max_length=50, unique=True)
+    db_host = models.CharField('数据库地址', max_length=200)
+    db_port = models.IntegerField('数据库端口', default=3306)
+    db_user = models.CharField('登录的用户名', max_length=100)
+    db_user_password = models.CharField('登录的密码', max_length=300)
     create_time = models.DateTimeField('创建时间', auto_now_add=True)
     update_time = models.DateTimeField('更新时间', auto_now=True)
 
     def __str__(self):
-        return self.cluster_name
+        return self.db_name
 
     class Meta:
-        verbose_name = u'主库地址配置'
-        verbose_name_plural = u'主库地址配置'
+        verbose_name = u'数据库地址配置'
+        verbose_name_plural = u'数据库地址配置'
 
     def save(self, *args, **kwargs):
         pc = Prpcrypt()  # 初始化
         self.master_password = pc.encrypt(self.master_password)
-        super(master_config, self).save(*args, **kwargs)
+        super(db_config, self).save(*args, **kwargs)
 
 
 # 存放各个SQL上线工单的详细内容，可定期归档或清理历史数据，也可通过alter table workflow row_format=compressed; 来进行压缩
@@ -60,7 +60,7 @@ class workflow(models.Model):
     # is_backup = models.IntegerField('是否备份，0为否，1为是', choices=((0,0),(1,1)))
     is_backup = models.CharField('是否备份', choices=(('否', '否'), ('是', '是')), max_length=20)
     review_content = models.TextField('自动审核内容的JSON格式')
-    cluster_name = models.CharField('集群名称', max_length=50)
+    db_name = models.CharField('数据库名称', max_length=50)
     reviewok_time = models.DateTimeField('人工审核通过的时间', null=True, blank=True)
     sql_content = models.TextField('具体sql内容')
     execute_result = models.TextField('执行结果的JSON格式', blank=True)
@@ -76,23 +76,23 @@ class workflow(models.Model):
 
 
 # 各个线上从库地址
-class slave_config(models.Model):
-    cluster_name = models.CharField('集群名称', max_length=50, unique=True)
-    slave_host = models.CharField('从库地址', max_length=200)
-    slave_port = models.IntegerField('从库端口', default=3306)
-    slave_user = models.CharField('登录从库的用户名', max_length=100)
-    slave_password = models.CharField('登录从库的密码', max_length=300)
-    create_time = models.DateTimeField('创建时间', auto_now_add=True)
-    update_time = models.DateTimeField('更新时间', auto_now=True)
-
-    class Meta:
-        verbose_name = u'从库地址配置'
-        verbose_name_plural = u'从库地址配置'
-
-    def save(self, *args, **kwargs):
-        pc = Prpcrypt()  # 初始化
-        self.slave_password = pc.encrypt(self.slave_password)
-        super(slave_config, self).save(*args, **kwargs)
+# class slave_config(models.Model):
+#     cluster_name = models.CharField('集群名称', max_length=50, unique=True)
+#     slave_host = models.CharField('从库地址', max_length=200)
+#     slave_port = models.IntegerField('从库端口', default=3306)
+#     slave_user = models.CharField('登录从库的用户名', max_length=100)
+#     slave_password = models.CharField('登录从库的密码', max_length=300)
+#     create_time = models.DateTimeField('创建时间', auto_now_add=True)
+#     update_time = models.DateTimeField('更新时间', auto_now=True)
+#
+#     class Meta:
+#         verbose_name = u'从库地址配置'
+#         verbose_name_plural = u'从库地址配置'
+#
+#     def save(self, *args, **kwargs):
+#         pc = Prpcrypt()  # 初始化
+#         self.slave_password = pc.encrypt(self.slave_password)
+#         super(slave_config, self).save(*args, **kwargs)
 
 
 # 工作流审核主表
@@ -207,7 +207,7 @@ class QueryPrivileges(models.Model):
 
 # 记录在线查询sql的日志
 class QueryLog(models.Model):
-    cluster_name = models.CharField('集群名称', max_length=50)
+    # cluster_name = models.CharField('集群名称', max_length=50)
     db_name = models.CharField('数据库名称', max_length=30)
     sqllog = models.TextField('执行的sql查询')
     effect_row = models.BigIntegerField('返回行数')
@@ -228,7 +228,8 @@ class DataMaskingColumns(models.Model):
     rule_type = models.IntegerField('规则类型',
                                     choices=((1, '手机号'), (2, '证件号码'), (3, '银行卡'), (4, '邮箱'), (5, '金额'), (6, '其他')))
     active = models.IntegerField('激活状态', choices=((0, '未激活'), (1, '激活')))
-    cluster_name = models.CharField('集群名称', max_length=50)
+    # cluster_name = models.CharField('集群名称', max_length=50)
+    db_name = models.CharField('数据库名称', max_length=50)
     table_schema = models.CharField('字段所在库名', max_length=64)
     table_name = models.CharField('字段所在表名', max_length=64)
     column_name = models.CharField('字段名', max_length=64)
@@ -257,38 +258,38 @@ class DataMaskingRules(models.Model):
         verbose_name_plural = u'脱敏规则配置'
 
 
-# 记录阿里云的认证信息
-class AliyunAccessKey(models.Model):
-    ak = models.CharField(max_length=50)
-    secret = models.CharField(max_length=100)
-    is_enable = models.IntegerField(choices=((1, '启用'), (2, '禁用')))
-    remark = models.CharField(max_length=50, default='', blank=True)
-
-    class Meta:
-        db_table = 'aliyun_access_key'
-        verbose_name = u'阿里云认证信息'
-        verbose_name_plural = u'阿里云认证信息'
-
-    def save(self, *args, **kwargs):
-        pc = Prpcrypt()  # 初始化
-        self.ak = pc.encrypt(self.ak)
-        self.secret = pc.encrypt(self.secret)
-        super(AliyunAccessKey, self).save(*args, **kwargs)
-
-
-# 阿里云rds配置信息
-class AliyunRdsConfig(models.Model):
-    cluster_name = models.OneToOneField(master_config, db_constraint=False, to_field='cluster_name',
-                                        db_column='cluster_name', verbose_name='集群名称', unique=True)
-    rds_dbinstanceid = models.CharField('阿里云RDS实例ID', max_length=100)
-
-    def __int__(self):
-        return self.rds_dbinstanceid
-
-    class Meta:
-        db_table = 'aliyun_rds_config'
-        verbose_name = u'阿里云rds配置'
-        verbose_name_plural = u'阿里云rds配置'
+# # 记录阿里云的认证信息
+# class AliyunAccessKey(models.Model):
+#     ak = models.CharField(max_length=50)
+#     secret = models.CharField(max_length=100)
+#     is_enable = models.IntegerField(choices=((1, '启用'), (2, '禁用')))
+#     remark = models.CharField(max_length=50, default='', blank=True)
+#
+#     class Meta:
+#         db_table = 'aliyun_access_key'
+#         verbose_name = u'阿里云认证信息'
+#         verbose_name_plural = u'阿里云认证信息'
+#
+#     def save(self, *args, **kwargs):
+#         pc = Prpcrypt()  # 初始化
+#         self.ak = pc.encrypt(self.ak)
+#         self.secret = pc.encrypt(self.secret)
+#         super(AliyunAccessKey, self).save(*args, **kwargs)
+#
+#
+# # 阿里云rds配置信息
+# class AliyunRdsConfig(models.Model):
+#     cluster_name = models.OneToOneField(master_config, db_constraint=False, to_field='cluster_name',
+#                                         db_column='cluster_name', verbose_name='集群名称', unique=True)
+#     rds_dbinstanceid = models.CharField('阿里云RDS实例ID', max_length=100)
+#
+#     def __int__(self):
+#         return self.rds_dbinstanceid
+#
+#     class Meta:
+#         db_table = 'aliyun_rds_config'
+#         verbose_name = u'阿里云rds配置'
+#         verbose_name_plural = u'阿里云rds配置'
 
 
 # SlowQuery
